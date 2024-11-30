@@ -2,14 +2,11 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const axios = require('axios');
 const qrcode = require('qrcode-terminal');
 
-// Your webhook URL
-const WEBHOOK_URL = 'https://bass-caring-cheetah.ngrok-free.app/receive-message';
-
 // Configuration
 const CHECK_INTERVAL = 5000; // Check every 5 seconds
 const MESSAGE_THRESHOLD_MINUTES = 5; // Check messages within last 5 minutes
 
-class WhatsAppWebhookClient {
+class WhatsAppClient {
     constructor() {
         this.client = new Client({
             authStrategy: new LocalAuth({
@@ -96,21 +93,10 @@ class WhatsAppWebhookClient {
                 });
 
                 try {
-                    await axios.post(WEBHOOK_URL, {
-                        message: msg.body,
-                        timestamp: msg.timestamp,
-                        type: msg.type
-                    });
+                    this.processCommand(msg.body);
 
-                    // Update last processed timestamp
-                    this.lastProcessedTimestamp = Math.max(
-                        this.lastProcessedTimestamp,
-                        msg.timestamp
-                    );
-
-                    console.log('Webhook sent successfully');
-                } catch (webhookError) {
-                    console.error('Webhook error:', webhookError.message);
+                } catch (error) {
+                    console.error("Error processing command:", error);
                 }
             }
         } catch (error) {
@@ -118,19 +104,45 @@ class WhatsAppWebhookClient {
         }
     }
 
+    processCommand(command) {
+        const lines = command.split('\n');
+        if (lines[0] === '/remind') {
+            const [_, number, message, timeString] = lines;
+            const delayMinutes = parseInt(timeString.split(' ')[0], 10);
+            const delayMs = delayMinutes * 60 * 1000;
+
+            console.log(`Scheduling reminder: Number=${"91" + number}, Message="${message}", Delay=${delayMinutes} minutes`);
+
+            setTimeout(() => {
+                this.sendMessage(number, message);
+            }, delayMs);
+        }
+    }
+
+    async sendMessage(number, message) {
+        try {
+            const chatId = `${number}@c.us`;
+            await this.client.sendMessage(chatId, message);
+            console.log(`Message sent to ${number}: "${message}"`);
+        } catch (error) {
+            console.error('Error sending message:', error);
+        }
+    }
+
+
     initialize() {
         this.client.initialize();
     }
 }
 
 // Create and initialize the client
-const webhookClient = new WhatsAppWebhookClient();
-webhookClient.initialize();
+const server = new WhatsAppClient();
+server.initialize();
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
     console.log('Shutting down...');
-    await webhookClient.client.destroy();
+    await server.client.destroy();
     process.exit(0);
 });
 
