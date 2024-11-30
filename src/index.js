@@ -94,7 +94,7 @@ class WhatsAppClient {
 
                 try {
                     const command = msg.body.split('\n')[0];
-                    switch (command) {
+                    switch (command.toLowerCase()) {
                         case "/sendtext":
                             await sendText(this.client, msg.body);
                             break;
