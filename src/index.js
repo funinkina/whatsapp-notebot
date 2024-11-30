@@ -1,6 +1,6 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const axios = require('axios');
 const qrcode = require('qrcode-terminal');
+const { sendText } = require('./sendText/sendTextHandler');
 
 // Configuration
 const CHECK_INTERVAL = 5000; // Check every 5 seconds
@@ -93,42 +93,28 @@ class WhatsAppClient {
                 });
 
                 try {
-                    this.processCommand(msg.body);
+                    const command = msg.body.split('\n')[0];
+                    switch (command) {
+                        case "/sendtext":
+                            await sendText(this.client, msg.body);
+                            break;
+                    }
 
                 } catch (error) {
                     console.error("Error processing command:", error);
                 }
             }
+
+            // Update last processed timestamp
+            if (recentMessages.length > 0) {
+                this.lastProcessedTimestamp = Math.max(
+                    ...recentMessages.map(msg => msg.timestamp)
+                );
+            }
         } catch (error) {
             console.error('Error checking recent messages:', error);
         }
     }
-
-    processCommand(command) {
-        const lines = command.split('\n');
-        if (lines[0] === '/remind') {
-            const [_, number, message, timeString] = lines;
-            const delayMinutes = parseInt(timeString.split(' ')[0], 10);
-            const delayMs = delayMinutes * 60 * 1000;
-
-            console.log(`Scheduling reminder: Number=${"91" + number}, Message="${message}", Delay=${delayMinutes} minutes`);
-
-            setTimeout(() => {
-                this.sendMessage(number, message);
-            }, delayMs);
-        }
-    }
-
-    async sendMessage(number, message) {
-        try {
-            const chatId = `${number}@c.us`;
-            await this.client.sendMessage(chatId, message);
-            console.log(`Message sent to ${number}: "${message}"`);
-        } catch (error) {
-            console.error('Error sending message:', error);
-        }
-    }
-
 
     initialize() {
         this.client.initialize();
