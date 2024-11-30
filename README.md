@@ -1,4 +1,4 @@
-# whatsapp-notebot
+# WhatsApp Selfbot
 ### A way to set up reminders, automate texts, and organise all the links and texts you send to yourself on WhatsApp.
 > [!NOTE]  
 > This project is still a huge work in progress
